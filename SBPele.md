@@ -178,10 +178,15 @@ local function cfg()
   return { cdnUrl = c.cdnUrl or DEFAULTS.cdnUrl, bundlePath = c.bundlePath or DEFAULTS.bundlePath }
 end
 
+-- Cache the module so the bundlePath probe (a 404 when no local copy exists)
+-- runs once per session instead of once per rendered diagram.
+local peleModule
 local function importPele()
+  if peleModule then return peleModule end
   local c = cfg()
   local m = space.fileExists(c.bundlePath) and js.importFromSpace(c.bundlePath) or js.import(c.cdnUrl)
-  if m and m.default and not m.render then return m.default end
+  if m and m.default and not m.render then m = m.default end
+  peleModule = m
   return m
 end
 
@@ -298,4 +303,24 @@ end
 
 codeWidget.define { language="pele", render=function(body) return sbpele.diagram(body) end }
 codeWidget.define { language="mermaid", render=function(body) return sbpele.diagram(body) end }
+
+-- Offer `pele` and `mermaid` when typing a fence language (```pe…).
+local FENCE_LANGUAGES = {
+  { label = "pele", detail = "Pele diagram" },
+  { label = "mermaid", detail = "Mermaid diagram (Pele)" },
+}
+
+event.listen {
+  name = "editor:complete",
+  run = function(e)
+    local typed = string.match(e.data.linePrefix, "^%s*```+%s*([%w_%-]*)$")
+    if not typed then return nil end
+    local options = {}
+    for _, lang in ipairs(FENCE_LANGUAGES) do
+      if string.sub(lang.label, 1, #typed) == typed then options[#options + 1] = lang end
+    end
+    if #options == 0 then return nil end
+    return { from = e.data.pos - #typed, options = options }
+  end,
+}
 ```
