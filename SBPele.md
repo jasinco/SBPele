@@ -31,7 +31,7 @@ Write a fenced `pele` block and move your cursor out of it to live-preview:
 
 The `sbpele` API generates diagrams at runtime from the object index. They update when the underlying page data changes:
 
-```space-lua
+```
 ${sbpele.diagram("flowchart LR\n  A[\"Hello\"] --> B[\"World\"]")}
 
 ${sbpele.diagram(sbpele.relationGraph{
@@ -165,6 +165,14 @@ function sbpele.toSource(input)
   return type(input) == "string" and input or sbpele.serialize(input)
 end
 
+config.define("sbpele", {
+  type = "object",
+  properties = {
+    cdnUrl = { type = "string", default = DEFAULTS.cdnUrl },
+    bundlePath = { type = "string", default = DEFAULTS.bundlePath },
+  },
+})
+
 local function cfg()
   local c = config.get("sbpele", {})
   return { cdnUrl = c.cdnUrl or DEFAULTS.cdnUrl, bundlePath = c.bundlePath or DEFAULTS.bundlePath }
@@ -242,7 +250,8 @@ function sbpele.relationGraph(spec)
   local function deref(v)
     if type(v) == "table" then v = v[1] end
     if type(v) ~= "string" then return nil end
-    return string.gsub(string.gsub(v, "^%[%[", ""), "%]%]$", "")
+    v = (string.gsub(v, "^%[%[", ""))
+    return (string.gsub(v, "%]%]$", ""))
   end
   local pages = {}
   for _, p in ipairs(spec.pages or {}) do pages[#pages + 1] = p end
